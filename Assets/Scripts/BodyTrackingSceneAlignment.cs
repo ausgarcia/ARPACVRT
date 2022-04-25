@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,6 +25,10 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     public Slider AngleSlider;
     public Calibration CalibrationScript;
     //public float RefreshTime;
+    private List<Quaternion> prevSceneVals= new List<Quaternion>();
+    private int framesToStore = 120*10;    //at 120 fps lets max this at 10 sec for now
+    private Quaternion SceneRotAverage = Quaternion.identity;
+    //dont need to store feet vals
 
     // Start is called before the first frame update
     void Start()
@@ -33,6 +38,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
 
     private void FixedUpdate()
     {
+        //Try storing last ten/three seconds of values and averaging? or stick with calibrate button?
         bodyParent = GameObject.Find("ControlledRobot(Clone)");
         networkPlayer = GameObject.Find("NetworkPlayer(Clone)");
         if (bodyParent != null && networkPlayer != null)
@@ -62,6 +68,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             //How good is the body tracking head rotation? probably need to get angle from all three points
             if (ManualToggle.isOn)  //Manual Scene Alignment
             {
+                prevSceneVals.Clear();  //reset stored frames if switched to manual
                 WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
                 
                 //Debug.Log("Angle Slider: " + AngleSlider.value);
@@ -75,43 +82,88 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             else   //Automatic rotation
             {
                 //ME580 way
-                /*
-                Vector3 BodyToLeft = bodyLeftHand.transform.position - bodyHead.transform.position;
-                Vector3 BodyToRight = bodyRightHand.transform.position - bodyHead.transform.position;
-                Vector3 BodyDirection = BodyToLeft + BodyToRight;
+                if(prevSceneVals.Count() < framesToStore)   //Just store first ten seconds of rotation values
+                {
+                    Vector3 BodyToLeft = bodyLeftHand.transform.position - bodyHead.transform.position;
+                    Vector3 BodyToRight = bodyRightHand.transform.position - bodyHead.transform.position;
+                    Vector3 BodyDirection = BodyToLeft + BodyToRight;
 
-                Vector3 AvatarToLeft = avatarLeftHand.transform.position - avatarHead.transform.position;
-                Vector3 AvatarToRight = avatarRightHand.transform.position - avatarHead.transform.position;
-                Vector3 AvatarDirection = AvatarToLeft + AvatarToRight;
-                //BodyDirection *= Quaternion.Inverse(AvatarDirection);
+                    Vector3 AvatarToLeft = avatarLeftHand.transform.position - avatarHead.transform.position;
+                    Vector3 AvatarToRight = avatarRightHand.transform.position - avatarHead.transform.position;
+                    Vector3 AvatarDirection = AvatarToLeft + AvatarToRight;
+                    //BodyDirection *= Quaternion.Inverse(AvatarDirection);
 
-                Quaternion BodyDirectionQuat = Quaternion.LookRotation(BodyDirection, Vector3.up);
-                Quaternion AvatarDirectionQuat = Quaternion.LookRotation(AvatarDirection, Vector3.up);
-                //Quaternion SceneDirection = AvatarDirectionQuat * Quaternion.Inverse(BodyDirectionQuat);
-                //Debug.Log("Body Euler: " + BodyDirectionQuat.eulerAngles.ToString());
-                //Debug.Log("Avatar Euler: " + AvatarDirectionQuat.eulerAngles.ToString());
+                    Quaternion BodyDirectionQuat = Quaternion.LookRotation(BodyDirection, Vector3.up);
+                    Quaternion AvatarDirectionQuat = Quaternion.LookRotation(AvatarDirection, Vector3.up);
+                    //Quaternion SceneDirection = AvatarDirectionQuat * Quaternion.Inverse(BodyDirectionQuat);
+                    //Debug.Log("Body Euler: " + BodyDirectionQuat.eulerAngles.ToString());
+                    //Debug.Log("Avatar Euler: " + AvatarDirectionQuat.eulerAngles.ToString());
 
-                //Debug.Log("BodyDirection QUAT: " + BodyDirection.ToString());
-                //Debug.Log("AvatarDirection QUAT: " + AvatarDirection.ToString());
-                //Debug.Log("SceneDirection QUAT: " + SceneDirection.ToString());
+                    //Debug.Log("BodyDirection QUAT: " + BodyDirection.ToString());
+                    //Debug.Log("AvatarDirection QUAT: " + AvatarDirection.ToString());
+                    //Debug.Log("SceneDirection QUAT: " + SceneDirection.ToString());
 
-                float yDif = BodyDirectionQuat.eulerAngles.y - AvatarDirectionQuat.eulerAngles.y;
-                //float AvatarLocalY = avatarHead.transform.rotation.y*(180/Mathf.PI);//Assuming that NetworkPlayerClone rotation = 0
-                //Debug.Log("yDif: " + yDif);
-                //Debug.Log("Avatar Local Y: " + AvatarLocalY);
+                    float yDif = BodyDirectionQuat.eulerAngles.y - AvatarDirectionQuat.eulerAngles.y;
+                    //float AvatarLocalY = avatarHead.transform.rotation.y*(180/Mathf.PI);//Assuming that NetworkPlayerClone rotation = 0
+                    //Debug.Log("yDif: " + yDif);
+                    //Debug.Log("Avatar Local Y: " + AvatarLocalY);
 
-                //SceneDirection.x = 0;
-                //SceneDirection.z = 0;
-                //WingSceneC.transform.rotation = new Quaternion(0f,yDif + AvatarLocalY , 0f, 0f);
-                //WingSceneC.transform.Rotate(new Vector3(0, yDif, 0));
-                WingSceneC.transform.rotation = Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation;
-                //Debug.Log("WingScene New Y Rotation: " + WingSceneC.transform.rotation.y);
-                //Debug.Log("NEW Y: " + (yDif - AvatarLocalY));
+                    //SceneDirection.x = 0;
+                    //SceneDirection.z = 0;
+                    //WingSceneC.transform.rotation = new Quaternion(0f,yDif + AvatarLocalY , 0f, 0f);
+                    //WingSceneC.transform.Rotate(new Vector3(0, yDif, 0));
+                    //WingSceneC.transform.rotation = Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation;
+
+                    //if (prevSceneVals.Count() > framesToStore)
+                    //{
+                    //    List<Quaternion> tmp = prevSceneVals.GetRange(1, prevSceneVals.Count());
+                    //    prevSceneVals = tmp;
+                    //    prevSceneVals.Add(WingSceneC.transform.rotation);
+                    //    tmp.Clear();
+                    //}
+                    //else
+                    //{
+                    //    prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
+                    //}
+
+                    //prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
+                    prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
+                    if (prevSceneVals.Count == 0)//should never be true though
+                    {
+                        SceneRotAverage = Quaternion.identity;
+                    }
+                    else if (prevSceneVals.Count() == 1)
+                    {
+                        SceneRotAverage = prevSceneVals[0];
+                    }
+                    else
+                    {
+                        int count = prevSceneVals.Count();
+                        float weight = 1.0f / (float)count;
+                        SceneRotAverage = Quaternion.identity;
+
+                        for (int i = 0; i < count; i++)//SLERP MAY NOT BE ACCURATE IF AVERAGING MORE THAN TWO QUATERNIONS, may need to redo this
+                            SceneRotAverage *= Quaternion.Slerp(Quaternion.identity, prevSceneVals[i], weight); //gets average angles of last x frames
+                    }
+                    WingSceneC.transform.rotation = SceneRotAverage;
+
+                    //Debug.Log("WingScene New Y Rotation: " + WingSceneC.transform.rotation.y);
+                    //Debug.Log("NEW Y: " + (yDif - AvatarLocalY));
+                }
+                else
+                {
+                    //do not change rotation of scene
+                }
+
 
                 //POSITIONING
                 WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
-                */
-                WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
+                
+
+                //WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
+                Vector3 targetPosition = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);//position is moving with head? position should lock in place in scene
+                Vector3 velocity = Vector3.zero;
+                WingSceneC.transform.position = Vector3.SmoothDamp(WingSceneC.transform.position, targetPosition, ref velocity, 0.3f);  //testing out the smoothing
             }
             //END OF ROTATION
 
@@ -140,47 +192,48 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     }
     public void CalibratePressed()
     {
-        print("TESTING TO SEE IF THE CALIBRATE EVENT WORKS");
+        print("TESTING TO SEE IF THE CALIBRATE EVENT WORKS(DISABLED)");
 
-        Vector3 VRHandPosition = CalibrationScript.getVRHandPosition();
-        float VRDistanceFromButton = CalibrationScript.getDistanceFromButton();
-        string whichHand = CalibrationScript.getLeftOrRightHand();
+        //Vector3 VRHandPosition = CalibrationScript.getVRHandPosition();
+        //float VRDistanceFromButton = CalibrationScript.getDistanceFromButton();
+        //string whichHand = CalibrationScript.getLeftOrRightHand();
 
-        Vector3 HeadToButton = avatarHead.transform.InverseTransformPoint(CalibrationScript.gameObject.transform.position);
-        //Vector3 HeadToButton = CalibrationScript.gameObject.transform.position - avatarHead.transform.position;
-        Vector3 HeadToHand;
-        if(whichHand == "Left")
-        {
-            //HeadToHand = avatarLeftHand.transform.position - avatarHead.transform.position;
-            HeadToHand = avatarHead.transform.InverseTransformPoint(bodyLeftHand.transform.position);//body or avatar hand?
-        }
-        else
-        {
-            //HeadToHand = avatarRightHand.transform.position - avatarHead.transform.position;
-            HeadToHand = avatarHead.transform.InverseTransformPoint(bodyRightHand.transform.position);
-        }
-        HeadToHand.y = 0f;  //dont care about the y value since we are only rotating around the y axis, do i need to normalize as well?
-        HeadToButton.y = 0f;
-        //Quaternion fromHandToButton = Quaternion.FromToRotation(HeadToHand, HeadToButton);
-        //float fromHandToButton = Vector3.Angle(HeadToHand, HeadToButton);   //first time seems to work but second and third calibrations 
-        //are incorrect, needs to work everytime so I can get error over time
-        //Debug.DrawLine(Vector3.zero, HeadToButton, Color.white, 100f);
-        //Debug.DrawLine(Vector3.zero, HeadToHand, Color.cyan, 100f);
-        //float fromHandToButton = AngleBetweenVector2(new Vector2(HeadToHand.x,HeadToHand.z), new Vector2(HeadToButton.x, HeadToButton.z));
-        float fromHandToButton = Vector3.SignedAngle(HeadToHand, HeadToButton, Vector3.up);
+        //Vector3 HeadToButton = avatarHead.transform.InverseTransformPoint(CalibrationScript.gameObject.transform.position);
+        ////Vector3 HeadToButton = CalibrationScript.gameObject.transform.position - avatarHead.transform.position;
+        //Vector3 HeadToHand;
+        //if(whichHand == "Left")
+        //{
+        //    //HeadToHand = avatarLeftHand.transform.position - avatarHead.transform.position;
+        //    HeadToHand = avatarHead.transform.InverseTransformPoint(bodyLeftHand.transform.position);//body or avatar hand?
+        //}
+        //else
+        //{
+        //    //HeadToHand = avatarRightHand.transform.position - avatarHead.transform.position;
+        //    HeadToHand = avatarHead.transform.InverseTransformPoint(bodyRightHand.transform.position);
+        //}
+        //HeadToHand.y = 0f;  //dont care about the y value since we are only rotating around the y axis, do i need to normalize as well?
+        //HeadToButton.y = 0f;
+        ////Quaternion fromHandToButton = Quaternion.FromToRotation(HeadToHand, HeadToButton);
+        ////float fromHandToButton = Vector3.Angle(HeadToHand, HeadToButton);   //first time seems to work but second and third calibrations 
+        ////are incorrect, needs to work everytime so I can get error over time
+        ////Debug.DrawLine(Vector3.zero, HeadToButton, Color.white, 100f);
+        ////Debug.DrawLine(Vector3.zero, HeadToHand, Color.cyan, 100f);
+        ////float fromHandToButton = AngleBetweenVector2(new Vector2(HeadToHand.x,HeadToHand.z), new Vector2(HeadToButton.x, HeadToButton.z));
+        //float fromHandToButton = Vector3.SignedAngle(HeadToHand, HeadToButton, Vector3.up);
 
-        print("Angle between vectors: " + fromHandToButton);//may need to zero y's still
-        Transform t = WingSceneC.transform;
-        print("Pre-rotation: " + t.rotation.eulerAngles.y);
-        /*if (fromHandToButton < 5f)
-        {
-            print("DIDNT ROTATE");
-        }
-        else
-        {*/
-        t.RotateAround(avatarHead.transform.position, Vector3.up, 360-fromHandToButton);
-        WingSceneC.transform.rotation = t.rotation;
-        print("Post-rotation: " + t.rotation.eulerAngles.y);
+        //print("Angle between vectors: " + fromHandToButton);//may need to zero y's still
+        //Transform t = WingSceneC.transform;
+        //print("Pre-rotation: " + t.rotation.eulerAngles.y);
+        ///*if (fromHandToButton < 5f)
+        //{
+        //    print("DIDNT ROTATE");
+        //}
+        //else
+        //{*/
+        //t.RotateAround(avatarHead.transform.position, Vector3.up, 360-fromHandToButton);
+        //WingSceneC.transform.rotation = t.rotation;
+        //print("Post-rotation: " + t.rotation.eulerAngles.y);
+
         //}
         
 
