@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using System.IO;    //for writing out files
+using UnityNative.Sharing.Example;
 
 public class BodyTrackingSceneAlignment : MonoBehaviour
 {
@@ -28,12 +30,30 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     private List<Quaternion> prevSceneVals= new List<Quaternion>();
     private int framesToStore = 120*10;    //at 120 fps lets max this at 10 sec for now
     private Quaternion SceneRotAverage = Quaternion.identity;
+
+    public string csvname = "";
     //dont need to store feet vals
+
+    [System.Serializable]
+    public class StoredData
+    {
+        public Vector3 ARhead;
+        public Vector3 ARright;
+        public Vector3 ARleft;
+        public Vector3 VRhead;
+        public Vector3 VRleft;
+        public Vector3 VRright;
+        //will need to get some sort of angle for calculation
+        public Vector3 ARsceneRot;
+    }
+
+    private List<StoredData> myStoredDataList = new List<StoredData>();
 
     // Start is called before the first frame update
     void Start()
     {
         CalibrationScript.CalibratePressed.AddListener(CalibratePressed);
+        csvname = Application.dataPath + "/output.csv";
     }
 
     private void FixedUpdate()
@@ -69,6 +89,8 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             if (ManualToggle.isOn)  //Manual Scene Alignment
             {
                 prevSceneVals.Clear();  //reset stored frames if switched to manual
+                WriteCSV();                 //write out stored data
+                myStoredDataList.Clear();   //clear stored data
                 WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
                 
                 //Debug.Log("Angle Slider: " + AngleSlider.value);
@@ -164,6 +186,17 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                 Vector3 targetPosition = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);//position is moving with head? position should lock in place in scene
                 Vector3 velocity = Vector3.zero;
                 WingSceneC.transform.position = Vector3.SmoothDamp(WingSceneC.transform.position, targetPosition, ref velocity, 0.3f);  //testing out the smoothing
+
+                //Store data
+                StoredData sd = new StoredData();
+                sd.VRhead = avatarHead.transform.position;
+                sd.VRleft = avatarLeftHand.transform.position;
+                sd.VRright = avatarRightHand.transform.position;
+                sd.ARhead = bodyHead.transform.position;
+                sd.ARleft = bodyLeftHand.transform.position;
+                sd.ARright = bodyRightHand.transform.position;
+                sd.ARsceneRot = WingSceneC.transform.rotation.eulerAngles;
+                myStoredDataList.Add(sd);
             }
             //END OF ROTATION
 
@@ -257,4 +290,89 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
         float sign = (Vector2.Dot(vec1Rotated90, vec2) < 0) ? -1.0f : 1.0f;
         return Vector2.Angle(vec1, vec2) * sign;
     }*/
+    public void WriteCSV()
+    {
+        if(myStoredDataList.Count > 0)
+        {
+            TextWriter tw = new StreamWriter(csvname, false);
+            string header = "VRheadx, VRheady, VRheadz, " +
+                "VRleftx, VRlefty, VRleftz," +
+                "VRrightx, VRrighty, VRrightz," +
+                "ARheadx, ARheady, ARheadz, " +
+                "ARleftx, ARlefty, ARleftz," +
+                "ARrightx, ARrighty, ARrightz," +
+                "ARsceneRotx, ARsceneRoty, ARsceneRotz," +
+                "VRtrackerx, VRtrackery, VRtrackerz," +
+                "ARtrackerx, ARtrackery, ARtrackerz";
+            tw.WriteLine(header);
+            tw.Close();
+
+            tw = new StreamWriter(csvname, true);
+            string data = "";
+            foreach (StoredData sd in myStoredDataList)
+            {
+                //data = data + ","+
+                //    sd.VRhead.x + "," +
+                //    sd.VRhead.y + "," +
+                //    sd.VRhead.z + "," +
+
+                //    sd.VRleft.x + "," +
+                //    sd.VRleft.y + "," +
+                //    sd.VRleft.z + "," +
+
+                //    sd.VRright.x + "," +
+                //    sd.VRright.y + "," +
+                //    sd.VRright.z + "," +
+
+                //    sd.ARhead.x + "," +
+                //    sd.ARhead.y + "," +
+                //    sd.ARhead.z + "," +
+
+                //    sd.ARleft.x + "," +
+                //    sd.ARleft.y + "," +
+                //    sd.ARleft.z + "," +
+
+                //    sd.ARright.x + "," +
+                //    sd.ARright.y + "," +
+                //    sd.ARright.z + "," +
+
+                //    sd.ARsceneRot.x + "," +
+                //    sd.ARsceneRot.y + "," +
+                //    sd.ARsceneRot.z;
+
+                tw.WriteLine(
+                    sd.VRhead.x + "," +
+                    sd.VRhead.y + "," +
+                    sd.VRhead.z + "," +
+
+                    sd.VRleft.x + "," +
+                    sd.VRleft.y + "," +
+                    sd.VRleft.z + "," +
+
+                    sd.VRright.x + "," +
+                    sd.VRright.y + "," +
+                    sd.VRright.z + "," +
+
+                    sd.ARhead.x + "," +
+                    sd.ARhead.y + "," +
+                    sd.ARhead.z + "," +
+
+                    sd.ARleft.x + "," +
+                    sd.ARleft.y + "," +
+                    sd.ARleft.z + "," +
+
+                    sd.ARright.x + "," +
+                    sd.ARright.y + "," +
+                    sd.ARright.z + "," +
+
+                    sd.ARsceneRot.x + "," +
+                    sd.ARsceneRot.y + "," +
+                    sd.ARsceneRot.z
+                    );
+            }
+            tw.Close();
+            string csvstring = System.IO.File.ReadAllText(csvname);
+            UnityNativeSharingHelper.ShareText(csvstring);
+        }
+    }
 }

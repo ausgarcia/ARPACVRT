@@ -175,6 +175,16 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unitynative.sharing": {
+      "version": "https://github.com/NicholasSheehan/Unity-Native-Sharing.git#v1.0.7",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.modules.screencapture": "1.0.0",
+        "com.unity.modules.imageconversion": "1.0.0"
+      },
+      "hash": "f8d2bcd1483073cd493e6def38a4994ac68c618b"
+    },
     "com.unity.modules.ai": {
       "version": "1.0.0",
       "depth": 0,
