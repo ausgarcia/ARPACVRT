@@ -15,23 +15,31 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     public GameObject bodyRightFoot;
     public GameObject bodyLeftFoot;
 
+
     public GameObject bodyParent;   //there may be none so this is probably going to be 1
+
+    public GameObject ARSessionOrigin;
+    public GameObject ARCamera;
 
     public GameObject avatarHead;
     public GameObject avatarRightHand;
     public GameObject avatarLeftHand;
     public GameObject networkPlayer;
+    public GameObject arTracker;
+
     //not sure if network player will be scaled
     public GameObject WingSceneC;    //WingSceneContainer
     public Toggle ManualToggle;
     public Slider AngleSlider;
     public Calibration CalibrationScript;
     //public float RefreshTime;
-    private List<Quaternion> prevSceneVals= new List<Quaternion>();
+    private List<Quaternion> prevSceneVals = new List<Quaternion>();
     private int framesToStore = 120*10;    //at 120 fps lets max this at 10 sec for now
     private Quaternion SceneRotAverage = Quaternion.identity;
+    private List<Quaternion> increasingQuats = new List<Quaternion>();
 
     public string csvname = "";
+    private bool csvWritten = true;
     //dont need to store feet vals
 
     [System.Serializable]
@@ -45,6 +53,8 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
         public Vector3 VRright;
         //will need to get some sort of angle for calculation
         public Vector3 ARsceneRot;
+        public Vector3 tracker;
+        public Vector3 iPadPos;
     }
 
     private List<StoredData> myStoredDataList = new List<StoredData>();
@@ -52,8 +62,12 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        ARSessionOrigin = GameObject.Find("AR Session Origin");
+        ARCamera = ARSessionOrigin.transform.Find("AR Camera").gameObject;
         CalibrationScript.CalibratePressed.AddListener(CalibratePressed);
-        csvname = Application.dataPath + "/output.csv";
+        print("Trying to get data path:");
+        csvname = "/output.csv";
+        print("Successfully got data path!");
     }
 
     private void FixedUpdate()
@@ -78,6 +92,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             avatarLeftHand = GameObject.Find("AvatarLeftHand").gameObject;
             //Debug.Log("Avatar Right Hand Position: " + avatarLeftHand.transform.position.ToString());
             avatarRightHand = GameObject.Find("AvatarRightHand").gameObject;
+            arTracker = GameObject.Find("arTracker");
 
             avatarHead.GetComponent<MeshRenderer>().enabled = false;
             avatarHead.transform.Find("LabelCanvas").gameObject.SetActive(false);
@@ -88,9 +103,17 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             //How good is the body tracking head rotation? probably need to get angle from all three points
             if (ManualToggle.isOn)  //Manual Scene Alignment
             {
+                //print("")
                 prevSceneVals.Clear();  //reset stored frames if switched to manual
-                WriteCSV();                 //write out stored data
-                myStoredDataList.Clear();   //clear stored data
+                if (csvWritten == false)
+                {
+                    Debug.Log("WRITING CSV");
+                    WriteCSV();                 //write out stored data
+                    Debug.Log("CSV WAS WRITTEN");
+                    myStoredDataList.Clear();   //clear stored data
+                    csvWritten = true;
+                }
+                
                 WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
                 
                 //Debug.Log("Angle Slider: " + AngleSlider.value);
@@ -103,6 +126,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             }
             else   //Automatic rotation
             {
+                csvWritten = false;
                 //ME580 way
                 if(prevSceneVals.Count() < framesToStore)   //Just store first ten seconds of rotation values
                 {
@@ -149,24 +173,49 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     //}
 
                     //prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
-                    prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
-                    if (prevSceneVals.Count == 0)//should never be true though
+
+                    //adding work to find median rather than mean
+                    Quaternion currentQuat = Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation;
+                    if (increasingQuats.Count == 0)
                     {
-                        SceneRotAverage = Quaternion.identity;
-                    }
-                    else if (prevSceneVals.Count() == 1)
-                    {
-                        SceneRotAverage = prevSceneVals[0];
+                        increasingQuats.Add(currentQuat);
+                        SceneRotAverage = increasingQuats[0];
                     }
                     else
                     {
-                        int count = prevSceneVals.Count();
-                        float weight = 1.0f / (float)count;
-                        SceneRotAverage = Quaternion.identity;
-
-                        for (int i = 0; i < count; i++)//SLERP MAY NOT BE ACCURATE IF AVERAGING MORE THAN TWO QUATERNIONS, may need to redo this
-                            SceneRotAverage *= Quaternion.Slerp(Quaternion.identity, prevSceneVals[i], weight); //gets average angles of last x frames
+                        for(int x = 0; x < increasingQuats.Count(); x++)
+                        {
+                            if (increasingQuats[x].eulerAngles.y >= currentQuat.eulerAngles.y)
+                            {
+                                increasingQuats.Insert(x, currentQuat);
+                                break;
+                            }
+                        }
+                        int median = increasingQuats.Count() / 2;
+                        SceneRotAverage = increasingQuats[median];
                     }
+                    
+
+                    //Finds mean
+                    //prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
+                    //if (prevSceneVals.Count == 0)//should never be true though
+                    //{
+                    //    SceneRotAverage = Quaternion.identity;
+                    //}
+                    //else if (prevSceneVals.Count() == 1)
+                    //{
+                    //    SceneRotAverage = prevSceneVals[0];
+                    //}
+                    //else
+                    //{
+                    //    int count = prevSceneVals.Count();
+                    //    float weight = 1.0f / (float)count;
+                    //    SceneRotAverage = Quaternion.identity;
+
+                    //    for (int i = 0; i < count; i++)//SLERP MAY NOT BE ACCURATE IF AVERAGING MORE THAN TWO QUATERNIONS, may need to redo this
+                    //        SceneRotAverage *= Quaternion.Slerp(Quaternion.identity, prevSceneVals[i], weight); //gets average angles of last x frames
+                    //}
+
                     WingSceneC.transform.rotation = SceneRotAverage;
 
                     //Debug.Log("WingScene New Y Rotation: " + WingSceneC.transform.rotation.y);
@@ -174,6 +223,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                 }
                 else
                 {
+                    Debug.Log("Initialization Completed");
                     //do not change rotation of scene
                 }
 
@@ -196,6 +246,8 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                 sd.ARleft = bodyLeftHand.transform.position;
                 sd.ARright = bodyRightHand.transform.position;
                 sd.ARsceneRot = WingSceneC.transform.rotation.eulerAngles;
+                sd.tracker = arTracker.transform.position;
+                sd.iPadPos = ARCamera.transform.position;//Vector3.zero;//Replace this with actual ipad location or is ipad worldspace 0?
                 myStoredDataList.Add(sd);
             }
             //END OF ROTATION
@@ -290,8 +342,11 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
         float sign = (Vector2.Dot(vec1Rotated90, vec2) < 0) ? -1.0f : 1.0f;
         return Vector2.Angle(vec1, vec2) * sign;
     }*/
+    
+
     public void WriteCSV()
     {
+        Debug.Log("List size: " + myStoredDataList.Count);
         if(myStoredDataList.Count > 0)
         {
             TextWriter tw = new StreamWriter(csvname, false);
@@ -302,8 +357,8 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                 "ARleftx, ARlefty, ARleftz," +
                 "ARrightx, ARrighty, ARrightz," +
                 "ARsceneRotx, ARsceneRoty, ARsceneRotz," +
-                "VRtrackerx, VRtrackery, VRtrackerz," +
-                "ARtrackerx, ARtrackery, ARtrackerz";
+                "trackerx, trackery, trackerz," +
+                "ipadx, ipady, ipadz";
             tw.WriteLine(header);
             tw.Close();
 
@@ -367,12 +422,25 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
 
                     sd.ARsceneRot.x + "," +
                     sd.ARsceneRot.y + "," +
-                    sd.ARsceneRot.z
+                    sd.ARsceneRot.z + "," +
+
+                    sd.tracker.x + "," +
+                    sd.tracker.y + "," +
+                    sd.tracker.z + "," +
+
+                    sd.iPadPos.x + "," +
+                    sd.iPadPos.y + "," +
+                    sd.iPadPos.z
                     );
             }
             tw.Close();
+            Debug.Log("csv path: " + csvname);  //this is never reached
             string csvstring = System.IO.File.ReadAllText(csvname);
+            Debug.Log("CSV STRING!!!!!!!!!!!");
+            Debug.Log(csvstring);
             UnityNativeSharingHelper.ShareText(csvstring);
+            Debug.Log("String Shared Successfully");
         }
     }
 }
+

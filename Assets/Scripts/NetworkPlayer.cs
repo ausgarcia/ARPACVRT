@@ -18,7 +18,7 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
     public Transform rightHand;
     public Transform tracker;
     public PhotonView PV;
-    public GameObject VRTK_SDK_Manager;
+    //public GameObject VRTK_SDK_Manager;
     private string labelText = "type";
     private GameObject SceneContainer;
 
@@ -26,7 +26,7 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
     {
         print("Im instantiated");
         PV = GetComponent<PhotonView>();
-        VRTK_SDK_Manager = GameObject.Find("[VRTK_SDKManager]");
+        //VRTK_SDK_Manager = GameObject.Find("[VRTK_SDKManager]");
         SceneContainer = GameObject.Find("WingSceneContainer");
 
         if (PV.IsMine)
