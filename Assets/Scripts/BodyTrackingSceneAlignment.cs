@@ -34,9 +34,13 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     public Calibration CalibrationScript;
     //public float RefreshTime;
     private List<Quaternion> prevSceneVals = new List<Quaternion>();
-    private int framesToStore = 120*10;    //at 120 fps lets max this at 10 sec for now
+    private int framesToInit = 120*10;    //at 120 fps lets max this at 10 sec for now
+    private int framesToCollect;
     private Quaternion SceneRotAverage = Quaternion.identity;
     private List<Quaternion> increasingQuats = new List<Quaternion>();
+    //private int maxTris = 0;
+    //private int maxVerts = 0;
+    private int fileNum = 1;
 
     public string csvname = "";
     private bool csvWritten = true;
@@ -62,16 +66,27 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        framesToCollect = framesToInit + 1000;
         ARSessionOrigin = GameObject.Find("AR Session Origin");
         ARCamera = ARSessionOrigin.transform.Find("AR Camera").gameObject;
         CalibrationScript.CalibratePressed.AddListener(CalibratePressed);
-        print("Trying to get data path:");
-        csvname = "/output.csv";
-        print("Successfully got data path!");
+        csvname = Path.Combine(Application.persistentDataPath, "output");
     }
 
     private void FixedUpdate()
     {
+        //show max verts and tris
+        //if (UnityEditor.UnityStats.vertices > maxVerts)
+        //{
+        //    maxVerts = UnityEditor.UnityStats.vertices;
+        //}
+        //if(UnityEditor.UnityStats.triangles > maxTris)
+        //{
+        //    maxTris = UnityEditor.UnityStats.triangles;
+        //}
+        //Debug.Log("maxVerts: " + maxVerts);
+        //Debug.Log("maxTris: " + maxTris);
+
         //Try storing last ten/three seconds of values and averaging? or stick with calibrate button?
         bodyParent = GameObject.Find("ControlledRobot(Clone)");
         networkPlayer = GameObject.Find("NetworkPlayer(Clone)");
@@ -128,7 +143,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             {
                 csvWritten = false;
                 //ME580 way
-                if(prevSceneVals.Count() < framesToStore)   //Just store first ten seconds of rotation values
+                if(prevSceneVals.Count() < framesToInit)   //Just store first ten seconds of rotation values
                 {
                     Vector3 BodyToLeft = bodyLeftHand.transform.position - bodyHead.transform.position;
                     Vector3 BodyToRight = bodyRightHand.transform.position - bodyHead.transform.position;
@@ -220,35 +235,65 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
 
                     //Debug.Log("WingScene New Y Rotation: " + WingSceneC.transform.rotation.y);
                     //Debug.Log("NEW Y: " + (yDif - AvatarLocalY));
+
+                    //POSITIONING
+                    WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
+
+                    //WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
+                    Vector3 targetPosition = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);//position is moving with head? position should lock in place in scene
+                    Vector3 velocity = Vector3.zero;
+                    //WingSceneC.transform.position = Vector3.SmoothDamp(WingSceneC.transform.position, targetPosition, ref velocity, 0.3f);  //testing out the smoothing
+
+                    
+                }
+                else if (prevSceneVals.Count < framesToCollect)
+                {
+                    //do not change rotation of scene
+                    if (prevSceneVals.Count == framesToInit)
+                    {
+                        Debug.Log("Initialization Completed");
+                    }
+                    //collect data
+                    //Store data
+                    StoredData sd = new StoredData();
+                    sd.VRhead = avatarHead.transform.position;
+                    sd.VRleft = avatarLeftHand.transform.position;
+                    sd.VRright = avatarRightHand.transform.position;
+                    sd.ARhead = bodyHead.transform.position;
+                    sd.ARleft = bodyLeftHand.transform.position;
+                    sd.ARright = bodyRightHand.transform.position;
+                    sd.ARsceneRot = WingSceneC.transform.rotation.eulerAngles;
+                    sd.tracker = arTracker.transform.position;
+                    sd.iPadPos = ARCamera.transform.position;//Vector3.zero;//Replace this with actual ipad location or is ipad worldspace 0?
+                    myStoredDataList.Add(sd);
                 }
                 else
                 {
-                    Debug.Log("Initialization Completed");
-                    //do not change rotation of scene
+                    Debug.Log("DATA COLLECTED");
                 }
 
-
-                //POSITIONING
-                WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
+                //need this for movement with joystick
+                ////POSITIONING
+                //WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
                 
 
-                //WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
-                Vector3 targetPosition = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);//position is moving with head? position should lock in place in scene
-                Vector3 velocity = Vector3.zero;
-                WingSceneC.transform.position = Vector3.SmoothDamp(WingSceneC.transform.position, targetPosition, ref velocity, 0.3f);  //testing out the smoothing
+                ////WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
+                //Vector3 targetPosition = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);//position is moving with head? position should lock in place in scene
+                //Vector3 velocity = Vector3.zero;
+                ////WingSceneC.transform.position = Vector3.SmoothDamp(WingSceneC.transform.position, targetPosition, ref velocity, 0.3f);  //testing out the smoothing
 
-                //Store data
-                StoredData sd = new StoredData();
-                sd.VRhead = avatarHead.transform.position;
-                sd.VRleft = avatarLeftHand.transform.position;
-                sd.VRright = avatarRightHand.transform.position;
-                sd.ARhead = bodyHead.transform.position;
-                sd.ARleft = bodyLeftHand.transform.position;
-                sd.ARright = bodyRightHand.transform.position;
-                sd.ARsceneRot = WingSceneC.transform.rotation.eulerAngles;
-                sd.tracker = arTracker.transform.position;
-                sd.iPadPos = ARCamera.transform.position;//Vector3.zero;//Replace this with actual ipad location or is ipad worldspace 0?
-                myStoredDataList.Add(sd);
+                ////Store data
+                //StoredData sd = new StoredData();
+                //sd.VRhead = avatarHead.transform.position;
+                //sd.VRleft = avatarLeftHand.transform.position;
+                //sd.VRright = avatarRightHand.transform.position;
+                //sd.ARhead = bodyHead.transform.position;
+                //sd.ARleft = bodyLeftHand.transform.position;
+                //sd.ARright = bodyRightHand.transform.position;
+                //sd.ARsceneRot = WingSceneC.transform.rotation.eulerAngles;
+                //sd.tracker = arTracker.transform.position;
+                //sd.iPadPos = ARCamera.transform.position;//Vector3.zero;//Replace this with actual ipad location or is ipad worldspace 0?
+                //myStoredDataList.Add(sd);
             }
             //END OF ROTATION
 
@@ -349,7 +394,9 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
         Debug.Log("List size: " + myStoredDataList.Count);
         if(myStoredDataList.Count > 0)
         {
-            TextWriter tw = new StreamWriter(csvname, false);
+            FileStream fs = File.Open(csvname + fileNum + ".csv", FileMode.OpenOrCreate, FileAccess.Write);
+            fileNum++;
+            StreamWriter sw = new StreamWriter(fs);
             string header = "VRheadx, VRheady, VRheadz, " +
                 "VRleftx, VRlefty, VRleftz," +
                 "VRrightx, VRrighty, VRrightz," +
@@ -359,43 +406,12 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                 "ARsceneRotx, ARsceneRoty, ARsceneRotz," +
                 "trackerx, trackery, trackerz," +
                 "ipadx, ipady, ipadz";
-            tw.WriteLine(header);
-            tw.Close();
-
-            tw = new StreamWriter(csvname, true);
-            string data = "";
-            foreach (StoredData sd in myStoredDataList)
+            sw.WriteLine(header);
+            Debug.Log("Headers created successfully");
+                                                        //currently getting the initialization data which is not what I want
+            foreach (StoredData sd in myStoredDataList)//i dont need to export all to csv, just the last value being used? no I need a bunch of values after initialization
             {
-                //data = data + ","+
-                //    sd.VRhead.x + "," +
-                //    sd.VRhead.y + "," +
-                //    sd.VRhead.z + "," +
-
-                //    sd.VRleft.x + "," +
-                //    sd.VRleft.y + "," +
-                //    sd.VRleft.z + "," +
-
-                //    sd.VRright.x + "," +
-                //    sd.VRright.y + "," +
-                //    sd.VRright.z + "," +
-
-                //    sd.ARhead.x + "," +
-                //    sd.ARhead.y + "," +
-                //    sd.ARhead.z + "," +
-
-                //    sd.ARleft.x + "," +
-                //    sd.ARleft.y + "," +
-                //    sd.ARleft.z + "," +
-
-                //    sd.ARright.x + "," +
-                //    sd.ARright.y + "," +
-                //    sd.ARright.z + "," +
-
-                //    sd.ARsceneRot.x + "," +
-                //    sd.ARsceneRot.y + "," +
-                //    sd.ARsceneRot.z;
-
-                tw.WriteLine(
+                sw.WriteLine(
                     sd.VRhead.x + "," +
                     sd.VRhead.y + "," +
                     sd.VRhead.z + "," +
@@ -433,13 +449,14 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     sd.iPadPos.z
                     );
             }
-            tw.Close();
-            Debug.Log("csv path: " + csvname);  //this is never reached
-            string csvstring = System.IO.File.ReadAllText(csvname);
-            Debug.Log("CSV STRING!!!!!!!!!!!");
-            Debug.Log(csvstring);
-            UnityNativeSharingHelper.ShareText(csvstring);
-            Debug.Log("String Shared Successfully");
+            sw.Close();
+            fs.Close();
+            Debug.Log("csv path: " + csvname);
+            //string csvstring = System.IO.File.ReadAllText(csvname);
+            //Debug.Log("CSV STRING!!!!!!!!!!!");
+            //Debug.Log(csvstring);
+            //UnityNativeSharingHelper.ShareText(csvstring);
+            //Debug.Log("String Shared Successfully");
         }
     }
 }

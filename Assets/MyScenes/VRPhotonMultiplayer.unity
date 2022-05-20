@@ -18294,14 +18294,18 @@ MonoBehaviour:
   bodyRightFoot: {fileID: 0}
   bodyLeftFoot: {fileID: 0}
   bodyParent: {fileID: 0}
+  ARSessionOrigin: {fileID: 0}
+  ARCamera: {fileID: 0}
   avatarHead: {fileID: 0}
   avatarRightHand: {fileID: 0}
   avatarLeftHand: {fileID: 0}
   networkPlayer: {fileID: 0}
+  arTracker: {fileID: 0}
   WingSceneC: {fileID: 764306133}
   ManualToggle: {fileID: 1955338092}
   AngleSlider: {fileID: 542954331}
   CalibrationScript: {fileID: 231814671}
+  csvname: 
 --- !u!4 &518282589
 Transform:
   m_ObjectHideFlags: 0
