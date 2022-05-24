@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using System.IO;    //for writing out files
-using UnityNative.Sharing.Example;
+using System;
 
 public class BodyTrackingSceneAlignment : MonoBehaviour
 {
@@ -38,6 +38,9 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     private int framesToCollect;
     private Quaternion SceneRotAverage = Quaternion.identity;
     private List<Quaternion> increasingQuats = new List<Quaternion>();
+    private List<Quaternion> increasingTrackerQuats = new List<Quaternion>();
+    private List<Vector3> allPositions = new List<Vector3>();
+    private Vector3 averagePos = Vector3.zero;
     //private int maxTris = 0;
     //private int maxVerts = 0;
     private int fileNum = 1;
@@ -49,16 +52,17 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     [System.Serializable]
     public class StoredData
     {
-        public Vector3 ARhead;
-        public Vector3 ARright;
-        public Vector3 ARleft;
-        public Vector3 VRhead;
-        public Vector3 VRleft;
-        public Vector3 VRright;
-        //will need to get some sort of angle for calculation
-        public Vector3 ARsceneRot;
-        public Vector3 tracker;
-        public Vector3 iPadPos;
+        public float ArDistanceMag;
+        public float VrDistanceMag;
+        public float DistanceOff;
+        
+        public float ArSceneRot;
+        public float VrSceneRot;
+        public float RotationOff;
+
+        public Vector3 ARiPadPos;
+        public Vector3 VRiPadPos;
+        public float PositionOff;
     }
 
     private List<StoredData> myStoredDataList = new List<StoredData>();
@@ -145,56 +149,37 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                 //ME580 way
                 if(prevSceneVals.Count() < framesToInit)   //Just store first ten seconds of rotation values
                 {
-                    Vector3 BodyToLeft = bodyLeftHand.transform.position - bodyHead.transform.position;
-                    Vector3 BodyToRight = bodyRightHand.transform.position - bodyHead.transform.position;
+                    Vector3 BodyToLeft = new Vector3(bodyLeftHand.transform.position.x, 0, bodyLeftHand.transform.position.z)
+                        - new Vector3(bodyHead.transform.position.x, 0, bodyHead.transform.position.z);
+                    Vector3 BodyToRight = new Vector3(bodyRightHand.transform.position.x, 0, bodyRightHand.transform.position.z)
+                        - new Vector3(bodyHead.transform.position.x, 0, bodyHead.transform.position.z);
                     Vector3 BodyDirection = BodyToLeft + BodyToRight;
 
-                    Vector3 AvatarToLeft = avatarLeftHand.transform.position - avatarHead.transform.position;
-                    Vector3 AvatarToRight = avatarRightHand.transform.position - avatarHead.transform.position;
+                    Vector3 AvatarToLeft = new Vector3(avatarLeftHand.transform.position.x, 0, avatarLeftHand.transform.position.z)
+                        - new Vector3(avatarHead.transform.position.x, 0, avatarHead.transform.position.z);
+                    Vector3 AvatarToRight = new Vector3(avatarRightHand.transform.position.x, 0, avatarRightHand.transform.position.z)
+                        - new Vector3(avatarHead.transform.position.x, 0, avatarHead.transform.position.z);
                     Vector3 AvatarDirection = AvatarToLeft + AvatarToRight;
                     //BodyDirection *= Quaternion.Inverse(AvatarDirection);
 
                     Quaternion BodyDirectionQuat = Quaternion.LookRotation(BodyDirection, Vector3.up);
                     Quaternion AvatarDirectionQuat = Quaternion.LookRotation(AvatarDirection, Vector3.up);
-                    //Quaternion SceneDirection = AvatarDirectionQuat * Quaternion.Inverse(BodyDirectionQuat);
-                    //Debug.Log("Body Euler: " + BodyDirectionQuat.eulerAngles.ToString());
-                    //Debug.Log("Avatar Euler: " + AvatarDirectionQuat.eulerAngles.ToString());
-
-                    //Debug.Log("BodyDirection QUAT: " + BodyDirection.ToString());
-                    //Debug.Log("AvatarDirection QUAT: " + AvatarDirection.ToString());
-                    //Debug.Log("SceneDirection QUAT: " + SceneDirection.ToString());
 
                     float yDif = BodyDirectionQuat.eulerAngles.y - AvatarDirectionQuat.eulerAngles.y;
-                    //float AvatarLocalY = avatarHead.transform.rotation.y*(180/Mathf.PI);//Assuming that NetworkPlayerClone rotation = 0
-                    //Debug.Log("yDif: " + yDif);
-                    //Debug.Log("Avatar Local Y: " + AvatarLocalY);
 
-                    //SceneDirection.x = 0;
-                    //SceneDirection.z = 0;
-                    //WingSceneC.transform.rotation = new Quaternion(0f,yDif + AvatarLocalY , 0f, 0f);
-                    //WingSceneC.transform.Rotate(new Vector3(0, yDif, 0));
-                    //WingSceneC.transform.rotation = Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation;
+                    //for evaluation
+                    Quaternion VrTrackerDirectionQuat = Quaternion.LookRotation(arTracker.transform.position - avatarHead.transform.position, Vector3.up);
+                    Quaternion ArTrackerDirectionQuat = Quaternion.LookRotation(ARCamera.transform.position - bodyHead.transform.position, Vector3.up);
+                    float trackerYdif = ArTrackerDirectionQuat.eulerAngles.y - VrTrackerDirectionQuat.eulerAngles.y;
+                    Quaternion currentTrackerQuat = Quaternion.AngleAxis(trackerYdif, WingSceneC.transform.up) * WingSceneC.transform.rotation;
 
-                    //if (prevSceneVals.Count() > framesToStore)
-                    //{
-                    //    List<Quaternion> tmp = prevSceneVals.GetRange(1, prevSceneVals.Count());
-                    //    prevSceneVals = tmp;
-                    //    prevSceneVals.Add(WingSceneC.transform.rotation);
-                    //    tmp.Clear();
-                    //}
-                    //else
-                    //{
-                    //    prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
-                    //}
-
-                    //prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
-
-                    //adding work to find median rather than mean
+                    //finds median rotation
                     Quaternion currentQuat = Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation;
                     if (increasingQuats.Count == 0)
                     {
                         increasingQuats.Add(currentQuat);
-                        SceneRotAverage = increasingQuats[0];
+                        increasingTrackerQuats.Add(currentTrackerQuat);
+                        allPositions.Add(WingSceneC.transform.position);
                     }
                     else
                     {
@@ -206,30 +191,19 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                                 break;
                             }
                         }
+                        //for evaluation
+                        for (int x = 0; x < increasingTrackerQuats.Count(); x++)
+                        {
+                            if (increasingTrackerQuats[x].eulerAngles.y >= currentTrackerQuat.eulerAngles.y)
+                            {
+                                increasingTrackerQuats.Insert(x, currentTrackerQuat);
+                                break;
+                            }
+                        }
+
                         int median = increasingQuats.Count() / 2;
                         SceneRotAverage = increasingQuats[median];
                     }
-                    
-
-                    //Finds mean
-                    //prevSceneVals.Add(Quaternion.AngleAxis(yDif, WingSceneC.transform.up) * WingSceneC.transform.rotation);
-                    //if (prevSceneVals.Count == 0)//should never be true though
-                    //{
-                    //    SceneRotAverage = Quaternion.identity;
-                    //}
-                    //else if (prevSceneVals.Count() == 1)
-                    //{
-                    //    SceneRotAverage = prevSceneVals[0];
-                    //}
-                    //else
-                    //{
-                    //    int count = prevSceneVals.Count();
-                    //    float weight = 1.0f / (float)count;
-                    //    SceneRotAverage = Quaternion.identity;
-
-                    //    for (int i = 0; i < count; i++)//SLERP MAY NOT BE ACCURATE IF AVERAGING MORE THAN TWO QUATERNIONS, may need to redo this
-                    //        SceneRotAverage *= Quaternion.Slerp(Quaternion.identity, prevSceneVals[i], weight); //gets average angles of last x frames
-                    //}
 
                     WingSceneC.transform.rotation = SceneRotAverage;
 
@@ -237,14 +211,22 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     //Debug.Log("NEW Y: " + (yDif - AvatarLocalY));
 
                     //POSITIONING
-                    WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
+                    //Average position
+                    averagePos = Vector3.zero;
+                    Vector3 currentPos = Vector3.zero;
+                    foreach(Vector3 pos in allPositions)
+                    {
+                        currentPos += pos;
+                    }
+                    averagePos = currentPos/allPositions.Count();
+                    //Sets position
+                    WingSceneC.transform.position = averagePos;
 
                     //WingSceneC.transform.position = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);
-                    Vector3 targetPosition = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);//position is moving with head? position should lock in place in scene
-                    Vector3 velocity = Vector3.zero;
+                    //Vector3 targetPosition = bodyHead.transform.position - (avatarHead.transform.localPosition + networkPlayer.transform.localPosition);//position is moving with head? position should lock in place in scene
+                    //Vector3 velocity = Vector3.zero;
                     //WingSceneC.transform.position = Vector3.SmoothDamp(WingSceneC.transform.position, targetPosition, ref velocity, 0.3f);  //testing out the smoothing
 
-                    
                 }
                 else if (prevSceneVals.Count < framesToCollect)
                 {
@@ -254,23 +236,63 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                         Debug.Log("Initialization Completed");
                     }
                     //collect data
+                    //calculate position off
+                    Vector3 VrHeadPosition = avatarHead.transform.position;//just get difference between these two rather than use any tracker data? WAIT no I think these are set to the same position so no worky
+                    Vector3 ArHeadPosition = bodyHead.transform.position;//just get difference between these two rather than use any tracker data?since this one get locked in
+                    Vector3 ExpectedTrackerPosition = arTracker.transform.position;
+                    Vector3 ArTrackerPosition = ARCamera.transform.position;
+                    Vector3 BetweenVrHeadAndTracker = new Vector3(ExpectedTrackerPosition.x, 0, ExpectedTrackerPosition.z)
+                        - new Vector3(VrHeadPosition.x, 0, VrHeadPosition.z);//This is assuming same scales
+                    Vector3 BetweenArHeadAndTracker = new Vector3(ArTrackerPosition.x, 0, ArTrackerPosition.z)
+                        - new Vector3(ArHeadPosition.x, 0, ArHeadPosition.z);
+                    //Vector3 TranslatedArTrackerPosition;//rotate then translate, but does the fix position off by rotation?
+                    //Vector3 BetweenExpectedAndActual = ;
+                    //MAYBE UNDO SCENE ROTATION to get off rotation??
+                    //Easy way, if I do full rotation and translation then its just gonna be off by the same amount unless I get the rotation off by values first? maybe place vr values overtop of ar values?
+                    float difInDistance = Math.Abs(BetweenArHeadAndTracker.magnitude - BetweenVrHeadAndTracker.magnitude);
+                    //float trackingOffBy = BetweenExpectedAndActual.magnitude;
+                    float trackingOffBy = difInDistance;
+                    Debug.Log("Distance OFF BY: " + trackingOffBy);
+                    //use the correct scene rotation? I know VRHeadPosition = ARHeadPosition, I know translation vector from VRHeadPosition to ViveTracker, so apply that
+                    //translation to ARHeadPosition and see how far off the position is. Shouldnt rely on scene rotation
+                    //Or just one vector minus the other?
+                    //Will probably need to apply correct scene rotation
+                    Vector3 ExpectedPosition = new Vector3(VrHeadPosition.x, 0, VrHeadPosition.z)
+                        + new Vector3(BetweenArHeadAndTracker.x, 0, BetweenArHeadAndTracker.z);
+                    Vector3 ActualPosition = new Vector3(VrHeadPosition.x, 0, VrHeadPosition.z)
+                        + new Vector3(BetweenVrHeadAndTracker.x, 0, BetweenVrHeadAndTracker.z);
+                    float positionOffBy = Vector3.Distance(ExpectedPosition, ActualPosition);
+                    Debug.Log("Position off by: "+ positionOffBy);
+
+
+
+                    //calculate rotation off
+                    float angleBetweenTrackerVectors = Vector3.Angle(BetweenVrHeadAndTracker, BetweenArHeadAndTracker);
+                    Debug.Log("Angle of difference between head and ipad vectors: " + angleBetweenTrackerVectors);
+                    Quaternion median = increasingQuats[increasingQuats.Count() / 2];
+                    Quaternion trackerMedian = increasingTrackerQuats[increasingTrackerQuats.Count() / 2];
+                    float rotationOffBy = Math.Abs(median.eulerAngles.y - trackerMedian.eulerAngles.y);
+                    Debug.Log("Scene rotation off by: " + rotationOffBy);//SHOULD I DO SOMETHING SIMILAR FOR POSITION?
+
                     //Store data
                     StoredData sd = new StoredData();
-                    sd.VRhead = avatarHead.transform.position;
-                    sd.VRleft = avatarLeftHand.transform.position;
-                    sd.VRright = avatarRightHand.transform.position;
-                    sd.ARhead = bodyHead.transform.position;
-                    sd.ARleft = bodyLeftHand.transform.position;
-                    sd.ARright = bodyRightHand.transform.position;
-                    sd.ARsceneRot = WingSceneC.transform.rotation.eulerAngles;
-                    sd.tracker = arTracker.transform.position;
-                    sd.iPadPos = ARCamera.transform.position;//Vector3.zero;//Replace this with actual ipad location or is ipad worldspace 0?
+                    sd.ArDistanceMag = BetweenArHeadAndTracker.magnitude;
+                    sd.VrDistanceMag = BetweenVrHeadAndTracker.magnitude;
+                    sd.DistanceOff = trackingOffBy;
+                    sd.ARiPadPos = ExpectedPosition;
+                    sd.VRiPadPos = ActualPosition;
+                    sd.PositionOff = positionOffBy;
+                    sd.ArSceneRot = median.eulerAngles.y;
+                    sd.VrSceneRot = trackerMedian.eulerAngles.y;
+                    sd.RotationOff = rotationOffBy;
                     myStoredDataList.Add(sd);
                 }
                 else
                 {
                     Debug.Log("DATA COLLECTED");
                 }
+
+                prevSceneVals.Add(WingSceneC.transform.rotation);
 
                 //need this for movement with joystick
                 ////POSITIONING
@@ -397,56 +419,34 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             FileStream fs = File.Open(csvname + fileNum + ".csv", FileMode.OpenOrCreate, FileAccess.Write);
             fileNum++;
             StreamWriter sw = new StreamWriter(fs);
-            string header = "VRheadx, VRheady, VRheadz, " +
-                "VRleftx, VRlefty, VRleftz," +
-                "VRrightx, VRrighty, VRrightz," +
-                "ARheadx, ARheady, ARheadz, " +
-                "ARleftx, ARlefty, ARleftz," +
-                "ARrightx, ARrighty, ARrightz," +
-                "ARsceneRotx, ARsceneRoty, ARsceneRotz," +
-                "trackerx, trackery, trackerz," +
-                "ipadx, ipady, ipadz";
+            string header = "ArDistanceMag, VrDistanceMag, DistanceOff, " +
+                "ArPosX, ArPosY, ArPosZ," +
+                "VrPosX, VrPosY, VrPosZ," +
+                "PositionOff, " +
+                "ArSceneRot, VrSceneRot, RotationOff";
             sw.WriteLine(header);
             Debug.Log("Headers created successfully");
                                                         //currently getting the initialization data which is not what I want
             foreach (StoredData sd in myStoredDataList)//i dont need to export all to csv, just the last value being used? no I need a bunch of values after initialization
             {
                 sw.WriteLine(
-                    sd.VRhead.x + "," +
-                    sd.VRhead.y + "," +
-                    sd.VRhead.z + "," +
+                    sd.ArDistanceMag + "," +
+                    sd.VrDistanceMag + "," +
+                    sd.DistanceOff + "," +
 
-                    sd.VRleft.x + "," +
-                    sd.VRleft.y + "," +
-                    sd.VRleft.z + "," +
+                    sd.ARiPadPos.x + "," +
+                    sd.ARiPadPos.y + "," +
+                    sd.ARiPadPos.z + "," +
 
-                    sd.VRright.x + "," +
-                    sd.VRright.y + "," +
-                    sd.VRright.z + "," +
+                    sd.VRiPadPos.x + "," +
+                    sd.VRiPadPos.y + "," +
+                    sd.VRiPadPos.z + "," +
 
-                    sd.ARhead.x + "," +
-                    sd.ARhead.y + "," +
-                    sd.ARhead.z + "," +
+                    sd.PositionOff + "," +
 
-                    sd.ARleft.x + "," +
-                    sd.ARleft.y + "," +
-                    sd.ARleft.z + "," +
-
-                    sd.ARright.x + "," +
-                    sd.ARright.y + "," +
-                    sd.ARright.z + "," +
-
-                    sd.ARsceneRot.x + "," +
-                    sd.ARsceneRot.y + "," +
-                    sd.ARsceneRot.z + "," +
-
-                    sd.tracker.x + "," +
-                    sd.tracker.y + "," +
-                    sd.tracker.z + "," +
-
-                    sd.iPadPos.x + "," +
-                    sd.iPadPos.y + "," +
-                    sd.iPadPos.z
+                    sd.ArSceneRot + "," +
+                    sd.VrSceneRot + "," +
+                    sd.RotationOff
                     );
             }
             sw.Close();
@@ -455,7 +455,6 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             //string csvstring = System.IO.File.ReadAllText(csvname);
             //Debug.Log("CSV STRING!!!!!!!!!!!");
             //Debug.Log(csvstring);
-            //UnityNativeSharingHelper.ShareText(csvstring);
             //Debug.Log("String Shared Successfully");
         }
     }
