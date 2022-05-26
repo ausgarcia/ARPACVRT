@@ -36,7 +36,7 @@ public class NetworkController : MonoBehaviourPunCallbacks
             GameObject NetPlayer = PhotonNetwork.Instantiate("NetworkPlayer", Vector3.zero, Quaternion.identity, 0);
             if (SceneContainer != null)///scene container will always be null here since this is vr only portion of script
             {
-                NetPlayer.transform.parent = SceneContainer.transform;
+                //NetPlayer.transform.parent = SceneContainer.transform;
                 NetPlayer.transform.position = new Vector3(0, 0, 0);
                 Debug.Log("New Player Joined NC");
             }

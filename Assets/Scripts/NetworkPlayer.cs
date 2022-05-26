@@ -86,7 +86,7 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
 
             if (SceneContainer != null)// This is reached/ is mobile version
             {
-                this.gameObject.transform.parent = SceneContainer.transform;
+                //this.gameObject.transform.parent = SceneContainer.transform;
                 this.gameObject.transform.localPosition = new Vector3(0, 0, 0);
                 Debug.Log("New Player Joined NP");
             }
@@ -123,7 +123,7 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
         {
             this.transform.position = playerGlobal.transform.position;
             this.transform.rotation = playerGlobal.transform.rotation;
-            avatar.transform.localPosition = playerLocal.transform.localPosition;
+            avatar.transform.position = playerLocal.transform.position;//was local
             avatar.transform.localRotation = playerLocal.transform.localRotation;
             avatarLeftHand.transform.position = leftHand.transform.position;
             avatarLeftHand.transform.rotation = leftHand.transform.rotation;
