@@ -37,6 +37,7 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
             playerLocal = playerGlobal.transform.Find("Camera Offset").transform.Find("Main Camera");
             leftHand = playerGlobal.transform.Find("Camera Offset").transform.Find("LeftHand Controller");
             rightHand = playerGlobal.transform.Find("Camera Offset").transform.Find("RightHand Controller");
+            tracker = GameObject.Find("PuckCameraTracker").transform;
             //print("HEADSET TYPE " + VRTK_SDK_Manager.GetComponent<VRTK_SDKManager>().loadedSetup);
             /*switch (VRTK_SDK_Manager.GetComponent<VRTK_SDKManager>().loadedSetup.ToString())
             {
