@@ -18300,7 +18300,6 @@ MonoBehaviour:
   avatarRightHand: {fileID: 0}
   avatarLeftHand: {fileID: 0}
   networkPlayer: {fileID: 0}
-  arTracker: {fileID: 0}
   WingSceneC: {fileID: 764306133}
   ManualToggle: {fileID: 1955338092}
   AngleSlider: {fileID: 542954331}
@@ -87198,7 +87197,7 @@ PrefabInstance:
     - target: {fileID: 2655168328229502267, guid: 1d9649d18ef3e5a40871d3170c3333de,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -4.03
       objectReference: {fileID: 0}
     - target: {fileID: 2655168328229502267, guid: 1d9649d18ef3e5a40871d3170c3333de,
         type: 3}
@@ -87208,7 +87207,7 @@ PrefabInstance:
     - target: {fileID: 2655168328229502267, guid: 1d9649d18ef3e5a40871d3170c3333de,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -9.63
       objectReference: {fileID: 0}
     - target: {fileID: 2655168328229502267, guid: 1d9649d18ef3e5a40871d3170c3333de,
         type: 3}

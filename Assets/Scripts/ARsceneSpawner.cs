@@ -85,11 +85,13 @@ public class ARsceneSpawner : MonoBehaviour
                 if (GameObject.Find("ControlledRobot(Clone)") != null && GameObject.Find("NetworkPlayer(Clone)") != null)  //if a body is being tracked and there is a network user, turn the scene on
                 {
                     //Debug.Log("Wing Scene Set Active!!!!");
-                    WingScene.SetActive(true);
+                    //WingScene.SetActive(true);
+                    WingScene.transform.position = new Vector3(-4.03f, 0, -9.63f);
                 }
                 else
                 {
-                    WingScene.SetActive(false);
+                    //WingScene.SetActive(false);
+                    WingScene.transform.position = new Vector3(0, 1000, 0);
                     //Debug.Log("WING SCENE SET TO FALSE");
                 }
 

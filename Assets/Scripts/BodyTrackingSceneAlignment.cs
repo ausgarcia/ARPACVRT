@@ -25,7 +25,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     public GameObject avatarRightHand;
     public GameObject avatarLeftHand;
     public GameObject networkPlayer;
-    public GameObject arTracker;
+    //public GameObject arTracker;
 
     //not sure if network player will be scaled
     public GameObject WingSceneC;    //WingSceneContainer
@@ -39,7 +39,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
     private int framesToCollect;
     private Quaternion SceneRotAverage = Quaternion.identity;
     private List<Quaternion> increasingQuats = new List<Quaternion>();
-    private List<Quaternion> increasingTrackerQuats = new List<Quaternion>();
+    //private List<Quaternion> increasingTrackerQuats = new List<Quaternion>();
     private List<Vector3> allPositionsWSO = new List<Vector3>();
     private List<Vector3> allPositionsWSC = new List<Vector3>();
     private Vector3 averagePos = Vector3.zero;
@@ -85,21 +85,21 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
         actualScene = new GameObject("actualScenePosition");
 
         //For Testing
-        line1 = new GameObject("Line1").AddComponent<LineRenderer>();
-        line1.startColor = Color.black;
-        line1.endColor = Color.black;
-        line1.startWidth = 0.03f;
-        line1.endWidth = 0.03f;
-        line1.positionCount = 2;
-        line1.useWorldSpace = true;
+        //line1 = new GameObject("Line1").AddComponent<LineRenderer>();
+        //line1.startColor = Color.black;
+        //line1.endColor = Color.black;
+        //line1.startWidth = 0.03f;
+        //line1.endWidth = 0.03f;
+        //line1.positionCount = 2;
+        //line1.useWorldSpace = true;
 
-        line2 = new GameObject("Line2").AddComponent<LineRenderer>();
-        line2.startColor = Color.black;
-        line2.endColor = Color.black;
-        line2.startWidth = 0.03f;
-        line2.endWidth = 0.03f;
-        line2.positionCount = 2;
-        line2.useWorldSpace = true;
+        //line2 = new GameObject("Line2").AddComponent<LineRenderer>();
+        //line2.startColor = Color.black;
+        //line2.endColor = Color.black;
+        //line2.startWidth = 0.03f;
+        //line2.endWidth = 0.03f;
+        //line2.positionCount = 2;
+        //line2.useWorldSpace = true;
     }
 
     private void FixedUpdate()
@@ -138,7 +138,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
             avatarLeftHand = GameObject.Find("AvatarLeftHand").gameObject;
             //Debug.Log("Avatar Right Hand Position: " + avatarLeftHand.transform.position.ToString());
             avatarRightHand = GameObject.Find("AvatarRightHand").gameObject;
-            arTracker = GameObject.Find("arTracker");
+            //arTracker = GameObject.Find("arTracker");
 
             avatarHead.GetComponent<MeshRenderer>().enabled = false;
             avatarHead.transform.Find("LabelCanvas").gameObject.SetActive(false);
@@ -202,7 +202,6 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     float yDif = BodyDirectionQuat.eulerAngles.y - AvatarDirectionQuat.eulerAngles.y;
 
                     Vector3 newArWingSceneCposition;
-                    Vector3 newArWingSceneCrotation;
                     Vector3 newArWingSceneObjectPosition;
                     newArWingSceneCposition = bodyHead.transform.position;  //Using wing scene container parent as rotation point
                     WingSceneC.transform.position = newArWingSceneCposition;
@@ -220,10 +219,10 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     //line2.SetPosition(1, bodyHead.transform.position + AvatarDirection);
 
                     //for evaluation
-                    Quaternion VrTrackerDirectionQuat = Quaternion.LookRotation(arTracker.transform.position - avatarHead.transform.position, Vector3.up);
+                    //Quaternion VrTrackerDirectionQuat = Quaternion.LookRotation(arTracker.transform.position - avatarHead.transform.position, Vector3.up);
                     Quaternion ArTrackerDirectionQuat = Quaternion.LookRotation(ARCamera.transform.position - bodyHead.transform.position, Vector3.up);
-                    float trackerYdif = ArTrackerDirectionQuat.eulerAngles.y - VrTrackerDirectionQuat.eulerAngles.y;
-                    Quaternion currentTrackerQuat = Quaternion.AngleAxis(trackerYdif, WingSceneC.transform.up);
+                    //float trackerYdif = ArTrackerDirectionQuat.eulerAngles.y - VrTrackerDirectionQuat.eulerAngles.y;
+                    //Quaternion currentTrackerQuat = Quaternion.AngleAxis(trackerYdif, WingSceneC.transform.up);
 
                     //finds median rotation
                     Quaternion currentQuat = Quaternion.AngleAxis(yDif, WingSceneC.transform.up);
@@ -233,7 +232,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     if (increasingQuats.Count == 0)
                     {
                         increasingQuats.Add(currentQuat);
-                        increasingTrackerQuats.Add(currentTrackerQuat);
+                        //increasingTrackerQuats.Add(currentTrackerQuat);
                         allPositionsWSC.Add(WingSceneC.transform.position);
                         allPositionsWSO.Add(WingSceneObjects.transform.position);
                     }
@@ -248,14 +247,14 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                             }
                         }
                         //for evaluation
-                        for (int x = 0; x < increasingTrackerQuats.Count(); x++)
-                        {
-                            if (increasingTrackerQuats[x].eulerAngles.y >= currentTrackerQuat.eulerAngles.y)
-                            {
-                                increasingTrackerQuats.Insert(x, currentTrackerQuat);
-                                break;
-                            }
-                        }
+                        //for (int x = 0; x < increasingTrackerQuats.Count(); x++)
+                        //{
+                        //    if (increasingTrackerQuats[x].eulerAngles.y >= currentTrackerQuat.eulerAngles.y)
+                        //    {
+                        //        increasingTrackerQuats.Insert(x, currentTrackerQuat);
+                        //        break;
+                        //    }
+                        //}
 
                         int median = increasingQuats.Count() / 2;
                         SceneRotAverage = increasingQuats[median];
@@ -288,53 +287,53 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
 
                         //Find rotation differences
                         int median = increasingQuats.Count() / 2;
-                        int trMedian = increasingTrackerQuats.Count() / 2;
+                        //int trMedian = increasingTrackerQuats.Count() / 2;
                         Quaternion RotateByMedian = increasingQuats[median];
-                        Quaternion trRotateByMedian = increasingTrackerQuats[trMedian];
+                        //Quaternion trRotateByMedian = increasingTrackerQuats[trMedian];
                         WingSceneC.transform.rotation = RotateByMedian;     //try replacing this with trrotatebymedian to ensure accuracy for evaluation
-                        Debug.Log("FINAL ROTATION DIFFs, Expected: " + RotateByMedian.eulerAngles.y + "| Actual: " + trRotateByMedian.eulerAngles.y);
-                        float RotationOffBy = Math.Abs(RotateByMedian.eulerAngles.y - trRotateByMedian.eulerAngles.y);
-                        Debug.Log("FINAL ROTATION DIFFERENCE: " + RotationOffBy);
+                        //Debug.Log("FINAL ROTATION DIFFs, Expected: " + RotateByMedian.eulerAngles.y + "| Actual: " + trRotateByMedian.eulerAngles.y);
+                        //float RotationOffBy = Math.Abs(RotateByMedian.eulerAngles.y - trRotateByMedian.eulerAngles.y);
+                        //Debug.Log("FINAL ROTATION DIFFERENCE: " + RotationOffBy);
 
                         StoredData sd = new StoredData();
-                        sd.RotationOff = RotationOffBy;
-                        sd.VrSceneRot = trRotateByMedian.eulerAngles.y;
+                        //sd.RotationOff = RotationOffBy;
+                        //sd.VrSceneRot = trRotateByMedian.eulerAngles.y;
                         sd.ArSceneRot = RotateByMedian.eulerAngles.y;
                         myStoredDataList.Add(sd);
                     }
                     //Find position differences
-                    Vector3 TrackerToAvatar = new Vector3(avatarHead.transform.position.x, 0, avatarHead.transform.position.z)
-                        - new Vector3(arTracker.transform.position.x, 0, arTracker.transform.position.z);
-                    Vector3 CameraToBody = new Vector3(bodyHead.transform.position.x, 0, bodyHead.transform.position.z)
-                        - new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z);
-                    Vector3 TrackerToScene = VrScenePosition      //just use these for magnitude
-                        - new Vector3(arTracker.transform.position.x, 0, arTracker.transform.position.z);
-                    Vector3 CameraToScene = new Vector3(WingSceneObjects.transform.position.x, 0, WingSceneObjects.transform.position.z)
-                        - new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z);
-                    Vector3 CameraForward = new Vector3(ARCamera.transform.forward.x, 0, ARCamera.transform.forward.z);
-                    Vector3 TrackerForward = new Vector3(arTracker.transform.forward.x, 0, arTracker.transform.forward.z);
-                    float ArToBodyMag = (TrackerToAvatar.magnitude * CameraToScene.magnitude) / TrackerToScene.magnitude;
-                    float VrAngleBetweenBody = Vector3.Angle(CameraForward, CameraToBody);
-                    float ArAngleBetweenBody = Vector3.Angle(TrackerForward, TrackerToAvatar);
-                    Debug.Log("AR ANGLE BODY: " + ArAngleBetweenBody + " VR ANGLE BODY: " + VrAngleBetweenBody);
-                    Vector3 VrVecInArSceneBody = CameraToBody;
-                    VrVecInArSceneBody = Quaternion.Euler(0, VrAngleBetweenBody-ArAngleBetweenBody, 0) * VrVecInArSceneBody;
-                    VrVecInArSceneBody = VrVecInArSceneBody.normalized * ArToBodyMag;
-                    float BodyPosOff = Vector3.Distance(VrVecInArSceneBody, CameraToBody);
-                    Debug.Log("BODY POSOFF: " + BodyPosOff);
+                    //Vector3 TrackerToAvatar = new Vector3(avatarHead.transform.position.x, 0, avatarHead.transform.position.z)
+                    //    - new Vector3(arTracker.transform.position.x, 0, arTracker.transform.position.z);
+                    //Vector3 CameraToBody = new Vector3(bodyHead.transform.position.x, 0, bodyHead.transform.position.z)
+                    //    - new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z);
+                    //Vector3 TrackerToScene = VrScenePosition      //just use these for magnitude
+                    //    - new Vector3(arTracker.transform.position.x, 0, arTracker.transform.position.z);
+                    //Vector3 CameraToScene = new Vector3(WingSceneObjects.transform.position.x, 0, WingSceneObjects.transform.position.z)
+                    //    - new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z);
+                    //Vector3 CameraForward = new Vector3(ARCamera.transform.forward.x, 0, ARCamera.transform.forward.z);
+                    //Vector3 TrackerForward = new Vector3(arTracker.transform.forward.x, 0, arTracker.transform.forward.z);
+                    //float ArToBodyMag = (TrackerToAvatar.magnitude * CameraToScene.magnitude) / TrackerToScene.magnitude;
+                    //float VrAngleBetweenBody = Vector3.Angle(CameraForward, CameraToBody);
+                    //float ArAngleBetweenBody = Vector3.Angle(TrackerForward, TrackerToAvatar);
+                    //Debug.Log("AR ANGLE BODY: " + ArAngleBetweenBody + " VR ANGLE BODY: " + VrAngleBetweenBody);
+                    //Vector3 VrVecInArSceneBody = CameraToBody;
+                    //VrVecInArSceneBody = Quaternion.Euler(0, VrAngleBetweenBody-ArAngleBetweenBody, 0) * VrVecInArSceneBody;
+                    //VrVecInArSceneBody = VrVecInArSceneBody.normalized * ArToBodyMag;
+                    //float BodyPosOff = Vector3.Distance(VrVecInArSceneBody, CameraToBody);
+                    //Debug.Log("BODY POSOFF: " + BodyPosOff);
 
-                    float ArToSceneMag = (TrackerToScene.magnitude * CameraToBody.magnitude) / TrackerToAvatar.magnitude;
-                    float VrAngleBetweenScene = Vector3.Angle(CameraForward, CameraToScene);
-                    float ArAngleBetweenScene = Vector3.Angle(TrackerForward, TrackerToScene);
-                    Debug.Log("AR ANGLE SCENE: " + ArAngleBetweenScene + " VR ANGLE SCENE: " + VrAngleBetweenScene);
-                    Vector3 VrVecInArSceneS = CameraToScene;
-                    VrVecInArSceneS = Quaternion.Euler(0, VrAngleBetweenScene - ArAngleBetweenScene, 0) * VrVecInArSceneS;
-                    VrVecInArSceneS = VrVecInArSceneS.normalized * ArToSceneMag;
-                    float ScenePosOff = Vector3.Distance(VrVecInArSceneS, CameraToScene);
-                    Debug.Log("SCENE POSOFF: " + ScenePosOff);
+                    //float ArToSceneMag = (TrackerToScene.magnitude * CameraToBody.magnitude) / TrackerToAvatar.magnitude;
+                    //float VrAngleBetweenScene = Vector3.Angle(CameraForward, CameraToScene);
+                    //float ArAngleBetweenScene = Vector3.Angle(TrackerForward, TrackerToScene);
+                    //Debug.Log("AR ANGLE SCENE: " + ArAngleBetweenScene + " VR ANGLE SCENE: " + VrAngleBetweenScene);
+                    //Vector3 VrVecInArSceneS = CameraToScene;
+                    //VrVecInArSceneS = Quaternion.Euler(0, VrAngleBetweenScene - ArAngleBetweenScene, 0) * VrVecInArSceneS;
+                    //VrVecInArSceneS = VrVecInArSceneS.normalized * ArToSceneMag;
+                    //float ScenePosOff = Vector3.Distance(VrVecInArSceneS, CameraToScene);
+                    //Debug.Log("SCENE POSOFF: " + ScenePosOff);
 
 
-                    float PositionOffBy = BodyPosOff+ScenePosOff;
+                    //float PositionOffBy = BodyPosOff+ScenePosOff;
                     //Vector3 AvatarToTracker = new Vector3(arTracker.transform.position.x, 0, arTracker.transform.position.z)
                     //                        - new Vector3(avatarHead.transform.position.x, 0, avatarHead.transform.position.z);
                     //Vector3 AvatarToScene = new Vector3(-4.06f, 0, -9.6f)
@@ -370,8 +369,8 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     //float PositionOffBy = Vector3.Distance(new Vector3(WingSceneObjects.transform.position.x, 0, WingSceneObjects.transform.position.z), 
                     //    new Vector3(estimatedScene.transform.position.x, 0, estimatedScene.transform.position.z)); // might only need to add y to estimated arSceneposition and then can keep full wingsceneobjects position
                     StoredData sdp = new StoredData();
-                    sdp.ScenePositionOff = ScenePosOff;     //Just x and z off, not y yet
-                    sdp.BodyPositionOff = BodyPosOff;
+                    //sdp.ScenePositionOff = ScenePosOff;     //Just x and z off, not y yet
+                    //sdp.BodyPositionOff = BodyPosOff;
                     //Debug.Log("ESTIMATED MAGNITUDE: " + BodyToTracker.magnitude + " " + AvatarToScene.magnitude+ " " + AvatarToTracker.magnitude);
                     //Debug.Log("VRTrackerToScene: " + VrTrackerToSceneAngle + " TrackerAngle: " + TrackerAngle.y);
                     //Debug.Log("ESTIMATED MAGNITUDE: " + EstimatedBodyToSceneMagnitude);
@@ -387,10 +386,10 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                     //Debug.Log("BODYHEAD POSITION: " + bodyHead.transform.position); //see if distance between these positions is correct
                     //Debug.Log("ESTIMATED SCENE POSITION: " + estimatedScene.transform.position);
 
-                    line1.SetPosition(0, Vector3.zero);//new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z)
-                    line1.SetPosition(1, VrVecInArSceneS);   // - new Vector3(-4.06f, 0, -9.6f)
-                    line2.SetPosition(0, Vector3.zero);   // - new Vector3(-4.06f, 0, -9.6f) new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z)
-                    line2.SetPosition(1, CameraToScene);
+                    //line1.SetPosition(0, Vector3.zero);//new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z)
+                    //line1.SetPosition(1, VrVecInArSceneS);   // - new Vector3(-4.06f, 0, -9.6f)
+                    //line2.SetPosition(0, Vector3.zero);   // - new Vector3(-4.06f, 0, -9.6f) new Vector3(ARCamera.transform.position.x, 0, ARCamera.transform.position.z)
+                    //line2.SetPosition(1, CameraToScene);
 
                     //WingSceneObjects.transform.position = estimatedScene.transform.position;
 
@@ -473,7 +472,7 @@ public class BodyTrackingSceneAlignment : MonoBehaviour
                 }
                 else
                 {
-                    Debug.Log("DATA COLLECTED");
+                    //Debug.Log("DATA COLLECTED");
                 }
 
                 prevSceneVals.Add(WingSceneC.transform.rotation);

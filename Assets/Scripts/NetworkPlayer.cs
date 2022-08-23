@@ -10,13 +10,13 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
     public GameObject avatar;
     public GameObject avatarLeftHand;
     public GameObject avatarRightHand;
-    public GameObject arTracker;
+    //public GameObject arTracker;
     public TMPro.TextMeshProUGUI Label;
     public Transform playerGlobal;
     public Transform playerLocal;
     public Transform leftHand;
     public Transform rightHand;
-    public Transform tracker;
+    //public Transform tracker;
     public PhotonView PV;
     //public GameObject VRTK_SDK_Manager;
     private string labelText = "type";
@@ -37,7 +37,7 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
             playerLocal = playerGlobal.transform.Find("Camera Offset").transform.Find("Main Camera");
             leftHand = playerGlobal.transform.Find("Camera Offset").transform.Find("LeftHand Controller");
             rightHand = playerGlobal.transform.Find("Camera Offset").transform.Find("RightHand Controller");
-            tracker = GameObject.Find("PuckCameraTracker").transform;
+            //tracker = GameObject.Find("PuckCameraTracker").transform;
             //print("HEADSET TYPE " + VRTK_SDK_Manager.GetComponent<VRTK_SDKManager>().loadedSetup);
             /*switch (VRTK_SDK_Manager.GetComponent<VRTK_SDKManager>().loadedSetup.ToString())
             {
@@ -130,8 +130,8 @@ public class NetworkPlayer : Photon.Pun.MonoBehaviourPun
             avatarLeftHand.transform.rotation = leftHand.transform.rotation;
             avatarRightHand.transform.position = rightHand.transform.position;
             avatarRightHand.transform.rotation = rightHand.transform.rotation;
-            arTracker.transform.position = tracker.transform.position;
-            arTracker.transform.rotation = tracker.transform.rotation;
+            //arTracker.transform.position = tracker.transform.position;
+            //arTracker.transform.rotation = tracker.transform.rotation;
         }
         else//will not always be in update    
         {
